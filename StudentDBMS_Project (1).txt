@@ -1,0 +1,1191 @@
+mysql> DROP DATABASE IF EXISTS STUDENT_DBMS;
+Query OK, 0 rows affected, 1 warning (0.15 sec)
+
+mysql> CREATE DATABASE STUDENT_DBMS;
+Query OK, 1 row affected (0.05 sec)
+
+mysql> USE STUDENT_DBMS;
+Database changed
+mysql> -- =====================================================================
+mysql> -- 1. DEPARTMENT (strong entity)
+mysql> -- =====================================================================
+mysql> CREATE TABLE Department (
+    ->     DeptID      INT PRIMARY KEY AUTO_INCREMENT,
+    ->     DeptName    VARCHAR(50) NOT NULL UNIQUE,
+    ->     Building    VARCHAR(30),
+    ->     HODID       INT NULL              -- FK added after Faculty exists (1:1 Heads relationship)
+    -> );
+Query OK, 0 rows affected (0.20 sec)
+
+mysql> -- =====================================================================
+mysql> -- 1. DEPARTMENT (strong entity)
+mysql> -- =====================================================================
+mysql> CREATE TABLE Department (
+    ->     DeptID      INT PRIMARY KEY AUTO_INCREMENT,
+    ->     DeptName    VARCHAR(50) NOT NULL UNIQUE,
+    ->     Building    VARCHAR(30),
+    ->     HODID       INT NULL              -- FK added after Faculty exists (1:1 Heads relationship)
+    -> );
+ERROR 1050 (42S01): Table 'department' already exists
+mysql> -- 2. FACULTY (strong entity)
+mysql> -- =====================================================================
+mysql> CREATE TABLE Faculty (
+    ->     FacultyID   INT PRIMARY KEY AUTO_INCREMENT,
+    ->     FirstName   VARCHAR(30) NOT NULL,
+    ->     LastName    VARCHAR(30) NOT NULL,
+    ->     Email       VARCHAR(50) UNIQUE,
+    ->     Phone       VARCHAR(15),
+    ->     DeptID      INT,
+    ->     HireDate    DATE,
+    ->     FOREIGN KEY (DeptID) REFERENCES Department(DeptID)
+    -> );
+Query OK, 0 rows affected (0.07 sec)
+
+mysql>  
+mysql> ALTER TABLE Department
+    ->     ADD CONSTRAINT fk_hod FOREIGN KEY (HODID) REFERENCES Faculty(FacultyID);
+Query OK, 0 rows affected (0.12 sec)
+Records: 0  Duplicates: 0  Warnings: 0
+
+mysql> -- =====================================================================
+mysql> -- 3. STUDENT (strong entity)  -- composite attribute: Name; composite
+mysql> --    attribute: Address (Street/City/State/PinCode); derived attr: Age (not stored)
+mysql> -- =====================================================================
+mysql> CREATE TABLE Student (
+    ->     StudentID     INT PRIMARY KEY AUTO_INCREMENT,
+    ->     FirstName     VARCHAR(30) NOT NULL,
+    ->     LastName      VARCHAR(30) NOT NULL,
+    ->     DOB           DATE NOT NULL,
+    ->     Gender        ENUM('M','F','O'),
+    ->     Email         VARCHAR(50) UNIQUE,
+    ->     Street        VARCHAR(50),
+    ->     City          VARCHAR(30),
+    ->     State         VARCHAR(30),
+    ->     PinCode       VARCHAR(10),
+    ->     DeptID        INT,
+    ->     AdmissionDate DATE,
+    ->     FOREIGN KEY (DeptID) REFERENCES Department(DeptID)
+    -> );
+Query OK, 0 rows affected (0.04 sec)
+
+mysql> -- =====================================================================
+mysql> -- 4. STUDENTPHONE (weak entity: multivalued attribute normalized)
+mysql> --    Partial key = PhoneNumber; full key = (StudentID, PhoneNumber)
+mysql> -- =====================================================================
+mysql> CREATE TABLE StudentPhone (
+    ->     StudentID   INT,
+    ->     PhoneNumber VARCHAR(15),
+    ->     PRIMARY KEY (StudentID, PhoneNumber),
+    ->     FOREIGN KEY (StudentID) REFERENCES Student(StudentID) ON DELETE CASCADE
+    -> );
+Query OK, 0 rows affected (0.03 sec)
+
+mysql> -- =====================================================================
+mysql> -- 5. GUARDIAN (weak entity, identifying relationship "Has" with Student)
+mysql> --    Partial key = GuardianID; full key = (GuardianID, StudentID)
+mysql> -- =====================================================================
+mysql> CREATE TABLE Guardian (
+    ->     GuardianID  INT,
+    ->     StudentID   INT,
+    ->     Name        VARCHAR(50) NOT NULL,
+    ->     Relation    VARCHAR(20),
+    ->     Phone       VARCHAR(15),
+    ->     Occupation  VARCHAR(30),
+    ->     PRIMARY KEY (GuardianID, StudentID),
+    ->     FOREIGN KEY (StudentID) REFERENCES Student(StudentID) ON DELETE CASCADE
+    -> );
+Query OK, 0 rows affected (0.05 sec)
+
+mysql> -- =====================================================================
+mysql> -- 6. COURSE (strong entity)
+mysql> -- =====================================================================
+mysql> CREATE TABLE Course (
+    ->     CourseID    INT PRIMARY KEY AUTO_INCREMENT,
+    ->     CourseName  VARCHAR(50) NOT NULL,
+    ->     Credits     INT,
+    ->     DeptID      INT,
+    ->     FOREIGN KEY (DeptID) REFERENCES Department(DeptID)
+    -> );
+Query OK, 0 rows affected (0.04 sec)
+
+mysql> -- =====================================================================
+mysql> -- 7. TEACHES (associative entity: Faculty M:N Course)
+mysql> -- =====================================================================
+mysql> CREATE TABLE Teaches (
+    ->     FacultyID   INT,
+    ->     CourseID    INT,
+    ->     Semester    VARCHAR(10),
+    ->     PRIMARY KEY (FacultyID, CourseID, Semester),
+    ->     FOREIGN KEY (FacultyID) REFERENCES Faculty(FacultyID),
+    ->     FOREIGN KEY (CourseID) REFERENCES Course(CourseID)
+    -> );
+Query OK, 0 rows affected (0.05 sec)
+
+mysql> -- =====================================================================
+mysql> -- 8. ENROLLMENT (associative entity: Student M:N Course)
+mysql> -- =====================================================================
+mysql> CREATE TABLE Enrollment (
+    ->     StudentID       INT,
+    ->     CourseID        INT,
+    ->     Semester        VARCHAR(10),
+    ->     Grade           VARCHAR(2),
+    ->     EnrollmentDate  DATE,
+    ->     PRIMARY KEY (StudentID, CourseID, Semester),
+    ->     FOREIGN KEY (StudentID) REFERENCES Student(StudentID) ON DELETE CASCADE,
+    ->     FOREIGN KEY (CourseID) REFERENCES Course(CourseID)
+    -> );
+Query OK, 0 rows affected (0.06 sec)
+
+mysql>  -- =====================================================================
+mysql> --  SAMPLE DATA
+mysql> -- =====================================================================
+mysql>  
+mysql> INSERT INTO Department (DeptID, DeptName, Building) VALUES
+    -> (1,'Computer Science','Block A'),
+    -> (2,'Electronics','Block B'),
+    -> (3,'Mechanical','Block C'),
+    -> (4,'Mathematics','Block A'),
+    -> (5,'Civil','Block D');
+Query OK, 5 rows affected (0.03 sec)
+Records: 5  Duplicates: 0  Warnings: 0
+
+mysql>  
+mysql> INSERT INTO Faculty (FacultyID,FirstName,LastName,Email,Phone,DeptID,HireDate) VALUES
+    -> (101,'Ravi','Kumar','ravi.kumar@univ.edu','9000000001',1,'2015-06-01'),
+    -> (102,'Sneha','Rao','sneha.rao@univ.edu','9000000002',1,'2017-08-15'),
+    -> (103,'Arjun','Mehta','arjun.mehta@univ.edu','9000000003',2,'2014-01-20'),
+    -> (104,'Divya','Nair','divya.nair@univ.edu','9000000004',2,'2019-03-11'),
+    -> (105,'Suresh','Patel','suresh.patel@univ.edu','9000000005',3,'2012-07-09'),
+    -> (106,'Kavita','Joshi','kavita.joshi@univ.edu','9000000006',4,'2016-11-23'),
+    -> (107,'Manoj','Verma','manoj.verma@univ.edu','9000000007',5,'2013-05-05'),
+    -> (108,'Anita','Singh','anita.singh@univ.edu','9000000008',1,'2020-01-10');
+Query OK, 8 rows affected (0.01 sec)
+Records: 8  Duplicates: 0  Warnings: 0
+
+mysql>  
+mysql> UPDATE Department SET HODID=101 WHERE DeptID=1;
+Query OK, 1 row affected (0.00 sec)
+Rows matched: 1  Changed: 1  Warnings: 0
+
+mysql> UPDATE Department SET HODID=103 WHERE DeptID=2;
+Query OK, 1 row affected (0.00 sec)
+Rows matched: 1  Changed: 1  Warnings: 0
+
+mysql> UPDATE Department SET HODID=105 WHERE DeptID=3;
+Query OK, 1 row affected (0.00 sec)
+Rows matched: 1  Changed: 1  Warnings: 0
+
+mysql> UPDATE Department SET HODID=106 WHERE DeptID=4;
+Query OK, 1 row affected (0.00 sec)
+Rows matched: 1  Changed: 1  Warnings: 0
+
+mysql> UPDATE Department SET HODID=107 WHERE DeptID=5;
+Query OK, 1 row affected (0.00 sec)
+Rows matched: 1  Changed: 1  Warnings: 0
+
+mysql>  
+mysql> INSERT INTO Student (StudentID,FirstName,LastName,DOB,Gender,Email,Street,City,State,PinCode,DeptID,AdmissionDate) VALUES
+    -> (1,'Aditya','Sharma','2004-05-14','M','aditya.sharma@stu.edu','12 MG Road','Vijayawada','Andhra Pradesh','520001',1,'2022-07-01'),
+    -> (2,'Priya','Reddy','2004-08-22','F','priya.reddy@stu.edu','45 Lake View','Hyderabad','Telangana','500001',1,'2022-07-01'),
+    -> (3,'Karthik','Iyer','2003-11-02','M','karthik.iyer@stu.edu','7 Temple St','Chennai','Tamil Nadu','600001',2,'2021-07-01'),
+    -> (4,'Meena','Krishnan','2004-01-30','F','meena.krishnan@stu.edu','23 Park Ave','Chennai','Tamil Nadu','600002',2,'2022-07-01'),
+    -> (5,'Rahul','Verma','2003-09-18','M','rahul.verma@stu.edu','9 Hill Rd','Pune','Maharashtra','411001',3,'2021-07-01'),
+    -> (6,'Sneha','Gupta','2004-03-25','F','sneha.gupta@stu.edu','56 River Side','Nagpur','Maharashtra','440001',3,'2022-07-01'),
+    -> (7,'Vikram','Rao','2002-12-12','M','vikram.rao@stu.edu','3 College Rd','Vijayawada','Andhra Pradesh','520002',4,'2020-07-01'),
+    -> (8,'Anjali','Nair','2004-07-07','F','anjali.nair@stu.edu','11 Beach Rd','Kochi','Kerala','682001',4,'2022-07-01'),
+    -> (9,'Suresh','Babu','2003-04-19','M','suresh.babu@stu.edu','88 Gandhi St','Guntur','Andhra Pradesh','522001',5,'2021-07-01'),
+    -> (10,'Divya','Menon','2004-02-09','F','divya.menon@stu.edu','15 Church Rd','Kochi','Kerala','682002',5,'2022-07-01'),
+    -> (11,'Rohit','Das','2003-06-27','M','rohit.das@stu.edu','21 Station Rd','Kolkata','West Bengal','700001',1,'2021-07-01'),
+    -> (12,'Pooja','Iyer','2004-10-15','F','pooja.iyer@stu.edu','5 Mount Rd','Chennai','Tamil Nadu','600003',1,'2022-07-01'),
+    -> (13,'Naveen','Kumar','2003-08-08','M','naveen.kumar@stu.edu','30 Ring Rd','Bengaluru','Karnataka','560001',2,'2021-07-01'),
+    -> (14,'Swathi','Reddy','2004-04-04','F','swathi.reddy@stu.edu','18 Jubilee Hills','Hyderabad','Telangana','500002',3,'2022-07-01'),
+    -> (15,'Kiran','Shetty','2003-01-21','M','kiran.shetty@stu.edu','40 MG Road','Mangaluru','Karnataka','575001',4,'2021-07-01');
+Query OK, 15 rows affected (0.01 sec)
+Records: 15  Duplicates: 0  Warnings: 0
+
+mysql>  
+mysql> INSERT INTO StudentPhone VALUES
+    -> (1,'9876500001'),(1,'9876500011'),
+    -> (2,'9876500002'),
+    -> (3,'9876500003'),(3,'9876500013'),
+    -> (4,'9876500004'),(5,'9876500005'),(6,'9876500006'),(7,'9876500007'),
+    -> (8,'9876500008'),(9,'9876500009'),(10,'9876500010'),(11,'9876500012'),
+    -> (12,'9876500014'),(13,'9876500015'),(14,'9876500016'),(15,'9876500017');
+Query OK, 17 rows affected (0.00 sec)
+Records: 17  Duplicates: 0  Warnings: 0
+
+mysql>  
+mysql> INSERT INTO Guardian VALUES
+    -> (1,1,'Ramesh Sharma','Father','9123400001','Business'),
+    -> (1,2,'Suman Reddy','Mother','9123400002','Teacher'),
+    -> (1,3,'Ganesh Iyer','Father','9123400003','Engineer'),
+    -> (1,4,'Lakshmi Krishnan','Mother','9123400004','Doctor'),
+    -> (1,5,'Prakash Verma','Father','9123400005','Farmer'),
+    -> (1,6,'Anita Gupta','Mother','9123400006','Nurse'),
+    -> (1,7,'Mohan Rao','Father','9123400007','Business'),
+    -> (1,8,'Radha Nair','Mother','9123400008','Clerk'),
+    -> (1,9,'Srinivas Babu','Father','9123400009','Business'),
+    -> (1,10,'Geetha Menon','Mother','9123400010','Teacher'),
+    -> (1,11,'Bimal Das','Father','9123400011','Engineer'),
+    -> (1,12,'Kalpana Iyer','Mother','9123400012','Doctor'),
+    -> (1,13,'Ravindra Kumar','Father','9123400013','Farmer'),
+    -> (1,14,'Sunitha Reddy','Mother','9123400014','Business'),
+    -> (1,15,'Prasad Shetty','Father','9123400015','Engineer'),
+    -> (2,1,'Sita Sharma','Mother','9123400016','Homemaker');
+Query OK, 16 rows affected (0.00 sec)
+Records: 16  Duplicates: 0  Warnings: 0
+
+mysql>  
+mysql> INSERT INTO Course (CourseID,CourseName,Credits,DeptID) VALUES
+    -> (201,'Database Systems',4,1),
+    -> (202,'Data Structures',4,1),
+    -> (203,'Operating Systems',3,1),
+    -> (204,'Digital Electronics',4,2),
+    -> (205,'Signals and Systems',3,2),
+    -> (206,'Thermodynamics',4,3),
+    -> (207,'Fluid Mechanics',3,3),
+    -> (208,'Discrete Mathematics',3,4),
+    -> (209,'Linear Algebra',3,4),
+    -> (210,'Structural Analysis',4,5);
+Query OK, 10 rows affected (0.00 sec)
+Records: 10  Duplicates: 0  Warnings: 0
+
+mysql>  
+mysql> INSERT INTO Teaches VALUES
+    -> (101,201,'Sem1'),(101,202,'Sem1'),(102,201,'Sem2'),(102,203,'Sem1'),
+    -> (103,204,'Sem1'),(104,205,'Sem1'),(105,206,'Sem1'),(105,207,'Sem2'),
+    -> (106,208,'Sem1'),(106,209,'Sem2'),(107,210,'Sem1'),(108,202,'Sem2');
+Query OK, 12 rows affected (0.01 sec)
+Records: 12  Duplicates: 0  Warnings: 0
+
+mysql>  
+mysql> INSERT INTO Enrollment (StudentID,CourseID,Semester,Grade,EnrollmentDate) VALUES
+    -> (1,201,'Sem1','A','2023-01-10'),(1,202,'Sem1','B+','2023-01-10'),(1,203,'Sem1','A-','2023-01-10'),
+    -> (2,201,'Sem1','A+','2023-01-10'),(2,202,'Sem1','A','2023-01-10'),
+    -> (3,204,'Sem1','B','2022-01-10'),(3,205,'Sem1','A-','2022-01-10'),
+    -> (4,204,'Sem1','A','2023-01-10'),(4,205,'Sem1','B+','2023-01-10'),
+    -> (5,206,'Sem1','B','2022-01-10'),(5,207,'Sem2','A-','2022-07-10'),
+    -> (6,206,'Sem1','A','2023-01-10'),
+    -> (7,208,'Sem1','A+','2021-01-10'),(7,209,'Sem2','A','2021-07-10'),
+    -> (8,208,'Sem1','B+','2023-01-10'),
+    -> (9,210,'Sem1','B','2022-01-10'),
+    -> (10,210,'Sem1','A-','2023-01-10'),
+    -> (11,201,'Sem1','C+','2022-01-10'),(11,202,'Sem1','B','2022-01-10'),
+    -> (12,201,'Sem1','A','2023-01-10'),
+    -> (13,204,'Sem1','B+','2022-01-10'),
+    -> (14,206,'Sem1','A-','2023-01-10'),
+    -> (15,208,'Sem1','A','2022-01-10'),
+    -> (1,204,'Sem2','B+','2023-07-10'),
+    -> (2,203,'Sem2','A','2023-07-10');
+Query OK, 25 rows affected (0.01 sec)
+Records: 25  Duplicates: 0  Warnings: 0
+
+mysql> SELECT * FROM DEPARTMENT;
++--------+------------------+----------+-------+
+| DeptID | DeptName         | Building | HODID |
++--------+------------------+----------+-------+
+|      1 | Computer Science | Block A  |   101 |
+|      2 | Electronics      | Block B  |   103 |
+|      3 | Mechanical       | Block C  |   105 |
+|      4 | Mathematics      | Block A  |   106 |
+|      5 | Civil            | Block D  |   107 |
++--------+------------------+----------+-------+
+5 rows in set (0.00 sec)
+
+mysql> SELECT * FROM FACULTY;
++-----------+-----------+----------+-----------------------+------------+--------+------------+
+| FacultyID | FirstName | LastName | Email                 | Phone      | DeptID | HireDate   |
++-----------+-----------+----------+-----------------------+------------+--------+------------+
+|       101 | Ravi      | Kumar    | ravi.kumar@univ.edu   | 9000000001 |      1 | 2015-06-01 |
+|       102 | Sneha     | Rao      | sneha.rao@univ.edu    | 9000000002 |      1 | 2017-08-15 |
+|       103 | Arjun     | Mehta    | arjun.mehta@univ.edu  | 9000000003 |      2 | 2014-01-20 |
+|       104 | Divya     | Nair     | divya.nair@univ.edu   | 9000000004 |      2 | 2019-03-11 |
+|       105 | Suresh    | Patel    | suresh.patel@univ.edu | 9000000005 |      3 | 2012-07-09 |
+|       106 | Kavita    | Joshi    | kavita.joshi@univ.edu | 9000000006 |      4 | 2016-11-23 |
+|       107 | Manoj     | Verma    | manoj.verma@univ.edu  | 9000000007 |      5 | 2013-05-05 |
+|       108 | Anita     | Singh    | anita.singh@univ.edu  | 9000000008 |      1 | 2020-01-10 |
++-----------+-----------+----------+-----------------------+------------+--------+------------+
+8 rows in set (0.00 sec)
+
+mysql> SELECT * FROM STUDENT ;
++-----------+-----------+----------+------------+--------+------------------------+------------------+------------+----------------+---------+--------+---------------+
+| StudentID | FirstName | LastName | DOB        | Gender | Email                  | Street           | City       | State          | PinCode | DeptID | AdmissionDate |
++-----------+-----------+----------+------------+--------+------------------------+------------------+------------+----------------+---------+--------+---------------+
+|         1 | Aditya    | Sharma   | 2004-05-14 | M      | aditya.sharma@stu.edu  | 12 MG Road       | Vijayawada | Andhra Pradesh | 520001  |      1 | 2022-07-01    |
+|         2 | Priya     | Reddy    | 2004-08-22 | F      | priya.reddy@stu.edu    | 45 Lake View     | Hyderabad  | Telangana      | 500001  |      1 | 2022-07-01    |
+|         3 | Karthik   | Iyer     | 2003-11-02 | M      | karthik.iyer@stu.edu   | 7 Temple St      | Chennai    | Tamil Nadu     | 600001  |      2 | 2021-07-01    |
+|         4 | Meena     | Krishnan | 2004-01-30 | F      | meena.krishnan@stu.edu | 23 Park Ave      | Chennai    | Tamil Nadu     | 600002  |      2 | 2022-07-01    |
+|         5 | Rahul     | Verma    | 2003-09-18 | M      | rahul.verma@stu.edu    | 9 Hill Rd        | Pune       | Maharashtra    | 411001  |      3 | 2021-07-01    |
+|         6 | Sneha     | Gupta    | 2004-03-25 | F      | sneha.gupta@stu.edu    | 56 River Side    | Nagpur     | Maharashtra    | 440001  |      3 | 2022-07-01    |
+|         7 | Vikram    | Rao      | 2002-12-12 | M      | vikram.rao@stu.edu     | 3 College Rd     | Vijayawada | Andhra Pradesh | 520002  |      4 | 2020-07-01    |
+|         8 | Anjali    | Nair     | 2004-07-07 | F      | anjali.nair@stu.edu    | 11 Beach Rd      | Kochi      | Kerala         | 682001  |      4 | 2022-07-01    |
+|         9 | Suresh    | Babu     | 2003-04-19 | M      | suresh.babu@stu.edu    | 88 Gandhi St     | Guntur     | Andhra Pradesh | 522001  |      5 | 2021-07-01    |
+|        10 | Divya     | Menon    | 2004-02-09 | F      | divya.menon@stu.edu    | 15 Church Rd     | Kochi      | Kerala         | 682002  |      5 | 2022-07-01    |
+|        11 | Rohit     | Das      | 2003-06-27 | M      | rohit.das@stu.edu      | 21 Station Rd    | Kolkata    | West Bengal    | 700001  |      1 | 2021-07-01    |
+|        12 | Pooja     | Iyer     | 2004-10-15 | F      | pooja.iyer@stu.edu     | 5 Mount Rd       | Chennai    | Tamil Nadu     | 600003  |      1 | 2022-07-01    |
+|        13 | Naveen    | Kumar    | 2003-08-08 | M      | naveen.kumar@stu.edu   | 30 Ring Rd       | Bengaluru  | Karnataka      | 560001  |      2 | 2021-07-01    |
+|        14 | Swathi    | Reddy    | 2004-04-04 | F      | swathi.reddy@stu.edu   | 18 Jubilee Hills | Hyderabad  | Telangana      | 500002  |      3 | 2022-07-01    |
+|        15 | Kiran     | Shetty   | 2003-01-21 | M      | kiran.shetty@stu.edu   | 40 MG Road       | Mangaluru  | Karnataka      | 575001  |      4 | 2021-07-01    |
++-----------+-----------+----------+------------+--------+------------------------+------------------+------------+----------------+---------+--------+---------------+
+15 rows in set (0.00 sec)
+
+mysql> SELECT * FROM STUDENTPHONE;
++-----------+-------------+
+| StudentID | PhoneNumber |
++-----------+-------------+
+|         1 | 9876500001  |
+|         1 | 9876500011  |
+|         2 | 9876500002  |
+|         3 | 9876500003  |
+|         3 | 9876500013  |
+|         4 | 9876500004  |
+|         5 | 9876500005  |
+|         6 | 9876500006  |
+|         7 | 9876500007  |
+|         8 | 9876500008  |
+|         9 | 9876500009  |
+|        10 | 9876500010  |
+|        11 | 9876500012  |
+|        12 | 9876500014  |
+|        13 | 9876500015  |
+|        14 | 9876500016  |
+|        15 | 9876500017  |
++-----------+-------------+
+17 rows in set (0.00 sec)
+
+mysql> SELECT * FROM GUARDIAN ;
++------------+-----------+------------------+----------+------------+------------+
+| GuardianID | StudentID | Name             | Relation | Phone      | Occupation |
++------------+-----------+------------------+----------+------------+------------+
+|          1 |         1 | Ramesh Sharma    | Father   | 9123400001 | Business   |
+|          1 |         2 | Suman Reddy      | Mother   | 9123400002 | Teacher    |
+|          1 |         3 | Ganesh Iyer      | Father   | 9123400003 | Engineer   |
+|          1 |         4 | Lakshmi Krishnan | Mother   | 9123400004 | Doctor     |
+|          1 |         5 | Prakash Verma    | Father   | 9123400005 | Farmer     |
+|          1 |         6 | Anita Gupta      | Mother   | 9123400006 | Nurse      |
+|          1 |         7 | Mohan Rao        | Father   | 9123400007 | Business   |
+|          1 |         8 | Radha Nair       | Mother   | 9123400008 | Clerk      |
+|          1 |         9 | Srinivas Babu    | Father   | 9123400009 | Business   |
+|          1 |        10 | Geetha Menon     | Mother   | 9123400010 | Teacher    |
+|          1 |        11 | Bimal Das        | Father   | 9123400011 | Engineer   |
+|          1 |        12 | Kalpana Iyer     | Mother   | 9123400012 | Doctor     |
+|          1 |        13 | Ravindra Kumar   | Father   | 9123400013 | Farmer     |
+|          1 |        14 | Sunitha Reddy    | Mother   | 9123400014 | Business   |
+|          1 |        15 | Prasad Shetty    | Father   | 9123400015 | Engineer   |
+|          2 |         1 | Sita Sharma      | Mother   | 9123400016 | Homemaker  |
++------------+-----------+------------------+----------+------------+------------+
+16 rows in set (0.00 sec)
+
+mysql> SELECT * FROM COURSE;
++----------+----------------------+---------+--------+
+| CourseID | CourseName           | Credits | DeptID |
++----------+----------------------+---------+--------+
+|      201 | Database Systems     |       4 |      1 |
+|      202 | Data Structures      |       4 |      1 |
+|      203 | Operating Systems    |       3 |      1 |
+|      204 | Digital Electronics  |       4 |      2 |
+|      205 | Signals and Systems  |       3 |      2 |
+|      206 | Thermodynamics       |       4 |      3 |
+|      207 | Fluid Mechanics      |       3 |      3 |
+|      208 | Discrete Mathematics |       3 |      4 |
+|      209 | Linear Algebra       |       3 |      4 |
+|      210 | Structural Analysis  |       4 |      5 |
++----------+----------------------+---------+--------+
+10 rows in set (0.00 sec)
+
+mysql> SELECT * FROM TEACHES;
++-----------+----------+----------+
+| FacultyID | CourseID | Semester |
++-----------+----------+----------+
+|       101 |      201 | Sem1     |
+|       102 |      201 | Sem2     |
+|       101 |      202 | Sem1     |
+|       108 |      202 | Sem2     |
+|       102 |      203 | Sem1     |
+|       103 |      204 | Sem1     |
+|       104 |      205 | Sem1     |
+|       105 |      206 | Sem1     |
+|       105 |      207 | Sem2     |
+|       106 |      208 | Sem1     |
+|       106 |      209 | Sem2     |
+|       107 |      210 | Sem1     |
++-----------+----------+----------+
+12 rows in set (0.00 sec)
+
+mysql> SELECT * FROM ENROLLMENT;
++-----------+----------+----------+-------+----------------+
+| StudentID | CourseID | Semester | Grade | EnrollmentDate |
++-----------+----------+----------+-------+----------------+
+|         1 |      201 | Sem1     | A     | 2023-01-10     |
+|         1 |      202 | Sem1     | B+    | 2023-01-10     |
+|         1 |      203 | Sem1     | A-    | 2023-01-10     |
+|         1 |      204 | Sem2     | B+    | 2023-07-10     |
+|         2 |      201 | Sem1     | A+    | 2023-01-10     |
+|         2 |      202 | Sem1     | A     | 2023-01-10     |
+|         2 |      203 | Sem2     | A     | 2023-07-10     |
+|         3 |      204 | Sem1     | B     | 2022-01-10     |
+|         3 |      205 | Sem1     | A-    | 2022-01-10     |
+|         4 |      204 | Sem1     | A     | 2023-01-10     |
+|         4 |      205 | Sem1     | B+    | 2023-01-10     |
+|         5 |      206 | Sem1     | B     | 2022-01-10     |
+|         5 |      207 | Sem2     | A-    | 2022-07-10     |
+|         6 |      206 | Sem1     | A     | 2023-01-10     |
+|         7 |      208 | Sem1     | A+    | 2021-01-10     |
+|         7 |      209 | Sem2     | A     | 2021-07-10     |
+|         8 |      208 | Sem1     | B+    | 2023-01-10     |
+|         9 |      210 | Sem1     | B     | 2022-01-10     |
+|        10 |      210 | Sem1     | A-    | 2023-01-10     |
+|        11 |      201 | Sem1     | C+    | 2022-01-10     |
+|        11 |      202 | Sem1     | B     | 2022-01-10     |
+|        12 |      201 | Sem1     | A     | 2023-01-10     |
+|        13 |      204 | Sem1     | B+    | 2022-01-10     |
+|        14 |      206 | Sem1     | A-    | 2023-01-10     |
+|        15 |      208 | Sem1     | A     | 2022-01-10     |
++-----------+----------+----------+-------+----------------+
+25 rows in set (0.00 sec)
+
+mysql> -- REAL-WORLD QUERIES
+mysql> -- Q1: All students in the Computer Science department
+mysql> SELECT s.StudentID, s.FirstName, s.LastName
+    -> FROM Student s JOIN Department d ON s.DeptID = d.DeptID
+    -> WHERE d.DeptName = 'Computer Science';
++-----------+-----------+----------+
+| StudentID | FirstName | LastName |
++-----------+-----------+----------+
+|         1 | Aditya    | Sharma   |
+|         2 | Priya     | Reddy    |
+|        11 | Rohit     | Das      |
+|        12 | Pooja     | Iyer     |
++-----------+-----------+----------+
+4 rows in set (0.00 sec)
+
+mysql> -- Q2: Full name + derived Age of every student
+mysql> SELECT StudentID, CONCAT(FirstName,' ',LastName) AS FullName,
+    ->        TIMESTAMPDIFF(YEAR, DOB, CURDATE()) AS Age
+    -> FROM Student;
++-----------+----------------+------+
+| StudentID | FullName       | Age  |
++-----------+----------------+------+
+|         1 | Aditya Sharma  |   22 |
+|         2 | Priya Reddy    |   21 |
+|         3 | Karthik Iyer   |   22 |
+|         4 | Meena Krishnan |   22 |
+|         5 | Rahul Verma    |   22 |
+|         6 | Sneha Gupta    |   22 |
+|         7 | Vikram Rao     |   23 |
+|         8 | Anjali Nair    |   22 |
+|         9 | Suresh Babu    |   23 |
+|        10 | Divya Menon    |   22 |
+|        11 | Rohit Das      |   23 |
+|        12 | Pooja Iyer     |   21 |
+|        13 | Naveen Kumar   |   23 |
+|        14 | Swathi Reddy   |   22 |
+|        15 | Kiran Shetty   |   23 |
++-----------+----------------+------+
+15 rows in set (0.00 sec)
+
+mysql> -- Q3: Students who have NOT enrolled in any course
+mysql> SELECT s.StudentID, s.FirstName, s.LastName
+    -> FROM Student s
+    -> WHERE s.StudentID NOT IN (SELECT StudentID FROM Enrollment);
+Empty set (0.01 sec)
+
+mysql> -- -> none in this sample (every student has >= 1 enrollment)
+mysql> 
+mysql> -- Q4: Count of students per department
+mysql> SELECT d.DeptName, COUNT(s.StudentID) AS TotalStudents
+    -> FROM Department d LEFT JOIN Student s ON d.DeptID = s.DeptID
+    -> GROUP BY d.DeptName
+    -> ORDER BY TotalStudents DESC;
++------------------+---------------+
+| DeptName         | TotalStudents |
++------------------+---------------+
+| Computer Science |             4 |
+| Electronics      |             3 |
+| Mathematics      |             3 |
+| Mechanical       |             3 |
+| Civil            |             2 |
++------------------+---------------+
+5 rows in set (0.00 sec)
+
+mysql> -- Q5: Departments with more than 2 students (HAVING)
+mysql> SELECT d.DeptName, COUNT(s.StudentID) AS TotalStudents
+    -> FROM Department d JOIN Student s ON d.DeptID = s.DeptID
+    -> GROUP BY d.DeptName
+    -> HAVING COUNT(s.StudentID) > 2;
++------------------+---------------+
+| DeptName         | TotalStudents |
++------------------+---------------+
+| Computer Science |             4 |
+| Electronics      |             3 |
+| Mathematics      |             3 |
+| Mechanical       |             3 |
++------------------+---------------+
+4 rows in set (0.00 sec)
+
+mysql> -- Q6: All courses offered by each department
+mysql> SELECT d.DeptName, c.CourseName, c.Credits
+    -> FROM Department d JOIN Course c ON d.DeptID = c.DeptID
+    -> ORDER BY d.DeptName, c.CourseName;
++------------------+----------------------+---------+
+| DeptName         | CourseName           | Credits |
++------------------+----------------------+---------+
+| Civil            | Structural Analysis  |       4 |
+| Computer Science | Data Structures      |       4 |
+| Computer Science | Database Systems     |       4 |
+| Computer Science | Operating Systems    |       3 |
+| Electronics      | Digital Electronics  |       4 |
+| Electronics      | Signals and Systems  |       3 |
+| Mathematics      | Discrete Mathematics |       3 |
+| Mathematics      | Linear Algebra       |       3 |
+| Mechanical       | Fluid Mechanics      |       3 |
+| Mechanical       | Thermodynamics       |       4 |
++------------------+----------------------+---------+
+10 rows in set (0.00 sec)
+
+mysql> -- Q7: Faculty who teach more than 1 course
+mysql> SELECT f.FirstName, f.LastName, COUNT(DISTINCT t.CourseID) AS CoursesTaught
+    -> FROM Faculty f JOIN Teaches t ON f.FacultyID = t.FacultyID
+    -> GROUP BY f.FacultyID
+    -> HAVING COUNT(DISTINCT t.CourseID) > 1;
++-----------+----------+---------------+
+| FirstName | LastName | CoursesTaught |
++-----------+----------+---------------+
+| Ravi      | Kumar    |             2 |
+| Sneha     | Rao      |             2 |
+| Suresh    | Patel    |             2 |
+| Kavita    | Joshi    |             2 |
++-----------+----------+---------------+
+4 rows in set (0.01 sec)
+
+mysql> -- Q8: Students enrolled in 'Database Systems'
+mysql> SELECT s.StudentID, s.FirstName, s.LastName, e.Grade
+    -> FROM Student s
+    -> JOIN Enrollment e ON s.StudentID = e.StudentID
+    -> JOIN Course c ON e.CourseID = c.CourseID
+    -> WHERE c.CourseName = 'Database Systems';
++-----------+-----------+----------+-------+
+| StudentID | FirstName | LastName | Grade |
++-----------+-----------+----------+-------+
+|         1 | Aditya    | Sharma   | A     |
+|         2 | Priya     | Reddy    | A+    |
+|        11 | Rohit     | Das      | C+    |
+|        12 | Pooja     | Iyer     | A     |
++-----------+-----------+----------+-------+
+4 rows in set (0.00 sec)
+
+mysql> -- Q9: Guardians of a specific student
+mysql> SELECT g.Name, g.Relation, g.Phone
+    -> FROM Guardian g JOIN Student s ON g.StudentID = s.StudentID
+    -> WHERE s.FirstName='Aditya' AND s.LastName='Sharma';
++---------------+----------+------------+
+| Name          | Relation | Phone      |
++---------------+----------+------------+
+| Ramesh Sharma | Father   | 9123400001 |
+| Sita Sharma   | Mother   | 9123400016 |
++---------------+----------+------------+
+2 rows in set (0.00 sec)
+
+mysql> -- Q10: All phone numbers per student (multivalued attribute, GROUP_CONCAT)
+mysql> SELECT s.StudentID, s.FirstName, GROUP_CONCAT(sp.PhoneNumber SEPARATOR ', ') AS Phones
+    -> FROM Student s JOIN StudentPhone sp ON s.StudentID = sp.StudentID
+    -> GROUP BY s.StudentID;
++-----------+-----------+------------------------+
+| StudentID | FirstName | Phones                 |
++-----------+-----------+------------------------+
+|         1 | Aditya    | 9876500001, 9876500011 |
+|         2 | Priya     | 9876500002             |
+|         3 | Karthik   | 9876500003, 9876500013 |
+|         4 | Meena     | 9876500004             |
+|         5 | Rahul     | 9876500005             |
+|         6 | Sneha     | 9876500006             |
+|         7 | Vikram    | 9876500007             |
+|         8 | Anjali    | 9876500008             |
+|         9 | Suresh    | 9876500009             |
+|        10 | Divya     | 9876500010             |
+|        11 | Rohit     | 9876500012             |
+|        12 | Pooja     | 9876500014             |
+|        13 | Naveen    | 9876500015             |
+|        14 | Swathi    | 9876500016             |
+|        15 | Kiran     | 9876500017             |
++-----------+-----------+------------------------+
+15 rows in set (0.01 sec)
+
+mysql> -- Q11: Total credits each student is currently enrolled for
+mysql> SELECT s.StudentID, s.FirstName, SUM(c.Credits) AS TotalCredits
+    -> FROM Student s JOIN Enrollment e ON s.StudentID = e.StudentID
+    -> JOIN Course c ON e.CourseID = c.CourseID
+    -> GROUP BY s.StudentID
+    -> ORDER BY TotalCredits DESC;
++-----------+-----------+--------------+
+| StudentID | FirstName | TotalCredits |
++-----------+-----------+--------------+
+|         1 | Aditya    |           15 |
+|         2 | Priya     |           11 |
+|        11 | Rohit     |            8 |
+|         3 | Karthik   |            7 |
+|         4 | Meena     |            7 |
+|         5 | Rahul     |            7 |
+|         7 | Vikram    |            6 |
+|        12 | Pooja     |            4 |
+|        13 | Naveen    |            4 |
+|         6 | Sneha     |            4 |
+|        14 | Swathi    |            4 |
+|         9 | Suresh    |            4 |
+|        10 | Divya     |            4 |
+|         8 | Anjali    |            3 |
+|        15 | Kiran     |            3 |
++-----------+-----------+--------------+
+15 rows in set (0.00 sec)
+
+mysql> -- Q12: Students who scored an 'A' or 'A-' or 'A+' grade in any course
+mysql> SELECT DISTINCT s.FirstName, s.LastName, c.CourseName, e.Grade
+    -> FROM Student s JOIN Enrollment e ON s.StudentID = e.StudentID
+    -> JOIN Course c ON e.CourseID = c.CourseID
+    -> WHERE e.Grade LIKE 'A%';
++-----------+----------+----------------------+-------+
+| FirstName | LastName | CourseName           | Grade |
++-----------+----------+----------------------+-------+
+| Aditya    | Sharma   | Database Systems     | A     |
+| Aditya    | Sharma   | Operating Systems    | A-    |
+| Priya     | Reddy    | Database Systems     | A+    |
+| Priya     | Reddy    | Data Structures      | A     |
+| Priya     | Reddy    | Operating Systems    | A     |
+| Karthik   | Iyer     | Signals and Systems  | A-    |
+| Meena     | Krishnan | Digital Electronics  | A     |
+| Rahul     | Verma    | Fluid Mechanics      | A-    |
+| Sneha     | Gupta    | Thermodynamics       | A     |
+| Vikram    | Rao      | Discrete Mathematics | A+    |
+| Vikram    | Rao      | Linear Algebra       | A     |
+| Divya     | Menon    | Structural Analysis  | A-    |
+| Pooja     | Iyer     | Database Systems     | A     |
+| Swathi    | Reddy    | Thermodynamics       | A-    |
+| Kiran     | Shetty   | Discrete Mathematics | A     |
++-----------+----------+----------------------+-------+
+15 rows in set (0.00 sec)
+
+mysql> -- Q13: Highest scorer per course (window function RANK)
+mysql> SELECT * FROM (
+    ->   SELECT c.CourseName, s.FirstName, s.LastName, e.Grade,
+    ->          RANK() OVER (PARTITION BY c.CourseID ORDER BY e.Grade ASC) AS rnk
+    ->   FROM Enrollment e
+    ->   JOIN Student s ON e.StudentID = s.StudentID
+    ->   JOIN Course c ON e.CourseID = c.CourseID
+    -> ) ranked WHERE rnk = 1;
++----------------------+-----------+----------+-------+-----+
+| CourseName           | FirstName | LastName | Grade | rnk |
++----------------------+-----------+----------+-------+-----+
+| Database Systems     | Aditya    | Sharma   | A     |   1 |
+| Database Systems     | Pooja     | Iyer     | A     |   1 |
+| Data Structures      | Priya     | Reddy    | A     |   1 |
+| Operating Systems    | Priya     | Reddy    | A     |   1 |
+| Digital Electronics  | Meena     | Krishnan | A     |   1 |
+| Signals and Systems  | Karthik   | Iyer     | A-    |   1 |
+| Thermodynamics       | Sneha     | Gupta    | A     |   1 |
+| Fluid Mechanics      | Rahul     | Verma    | A-    |   1 |
+| Discrete Mathematics | Kiran     | Shetty   | A     |   1 |
+| Linear Algebra       | Vikram    | Rao      | A     |   1 |
+| Structural Analysis  | Divya     | Menon    | A-    |   1 |
++----------------------+-----------+----------+-------+-----+
+11 rows in set (0.01 sec)
+
+mysql> -- Q14: Department-wise average number of enrollments per student
+mysql> SELECT d.DeptName,
+    ->        ROUND(COUNT(e.StudentID)/COUNT(DISTINCT s.StudentID), 2) AS AvgEnrollPerStudent
+    -> FROM Department d
+    -> JOIN Student s ON d.DeptID = s.DeptID
+    -> LEFT JOIN Enrollment e ON s.StudentID = e.StudentID
+    -> GROUP BY d.DeptName;
++------------------+---------------------+
+| DeptName         | AvgEnrollPerStudent |
++------------------+---------------------+
+| Civil            |                1.00 |
+| Computer Science |                2.50 |
+| Electronics      |                1.67 |
+| Mathematics      |                1.33 |
+| Mechanical       |                1.33 |
++------------------+---------------------+
+5 rows in set (0.02 sec)
+
+mysql> -- Q15: Faculty who is Head of Department (1:1 relationship)
+mysql> SELECT d.DeptName, f.FirstName, f.LastName
+    -> FROM Department d JOIN Faculty f ON d.HODID = f.FacultyID;
++------------------+-----------+----------+
+| DeptName         | FirstName | LastName |
++------------------+-----------+----------+
+| Computer Science | Ravi      | Kumar    |
+| Electronics      | Arjun     | Mehta    |
+| Mechanical       | Suresh    | Patel    |
+| Mathematics      | Kavita    | Joshi    |
+| Civil            | Manoj     | Verma    |
++------------------+-----------+----------+
+5 rows in set (0.00 sec)
+
+mysql>  
+mysql> -- Q16: Courses with no faculty assigned yet
+mysql> SELECT c.CourseName
+    -> FROM Course c
+    -> WHERE c.CourseID NOT IN (SELECT CourseID FROM Teaches);
+Empty set (0.00 sec)
+
+mysql> -- -> none in this sample (every course is covered)
+mysql> 
+mysql> -- Q17: Students admitted in the year 2022
+mysql> SELECT StudentID, FirstName, LastName, AdmissionDate
+    -> FROM Student
+    -> WHERE YEAR(AdmissionDate) = 2022;
++-----------+-----------+----------+---------------+
+| StudentID | FirstName | LastName | AdmissionDate |
++-----------+-----------+----------+---------------+
+|         1 | Aditya    | Sharma   | 2022-07-01    |
+|         2 | Priya     | Reddy    | 2022-07-01    |
+|         4 | Meena     | Krishnan | 2022-07-01    |
+|         6 | Sneha     | Gupta    | 2022-07-01    |
+|         8 | Anjali    | Nair     | 2022-07-01    |
+|        10 | Divya     | Menon    | 2022-07-01    |
+|        12 | Pooja     | Iyer     | 2022-07-01    |
+|        14 | Swathi    | Reddy    | 2022-07-01    |
++-----------+-----------+----------+---------------+
+8 rows in set (0.01 sec)
+
+mysql>  
+mysql> -- Q18: Youngest and oldest student (subquery with MIN/MAX)
+mysql> SELECT FirstName, LastName, DOB FROM Student
+    -> WHERE DOB = (SELECT MAX(DOB) FROM Student)
+    ->    OR DOB = (SELECT MIN(DOB) FROM Student);
++-----------+----------+------------+
+| FirstName | LastName | DOB        |
++-----------+----------+------------+
+| Vikram    | Rao      | 2002-12-12 |
+| Pooja     | Iyer     | 2004-10-15 |
++-----------+----------+------------+
+2 rows in set (0.01 sec)
+
+mysql> -- Q19: Students who share the same city (self-join)
+mysql> SELECT DISTINCT CONCAT(a.FirstName,' ',a.LastName) AS Student1,
+    ->        CONCAT(b.FirstName,' ',b.LastName) AS Student2, a.City
+    -> FROM Student a JOIN Student b
+    ->   ON a.City = b.City AND a.StudentID < b.StudentID;
++----------------+----------------+------------+
+| Student1       | Student2       | City       |
++----------------+----------------+------------+
+| Aditya Sharma  | Vikram Rao     | Vijayawada |
+| Priya Reddy    | Swathi Reddy   | Hyderabad  |
+| Karthik Iyer   | Meena Krishnan | Chennai    |
+| Karthik Iyer   | Pooja Iyer     | Chennai    |
+| Meena Krishnan | Pooja Iyer     | Chennai    |
+| Anjali Nair    | Divya Menon    | Kochi      |
++----------------+----------------+------------+
+6 rows in set (0.00 sec)
+
+mysql>  
+mysql> -- Q20: Faculty with their department (basic INNER JOIN)
+mysql> SELECT f.FirstName, f.LastName, d.DeptName
+    -> FROM Faculty f JOIN Department d ON f.DeptID = d.DeptID;
++-----------+----------+------------------+
+| FirstName | LastName | DeptName         |
++-----------+----------+------------------+
+| Manoj     | Verma    | Civil            |
+| Ravi      | Kumar    | Computer Science |
+| Sneha     | Rao      | Computer Science |
+| Anita     | Singh    | Computer Science |
+| Arjun     | Mehta    | Electronics      |
+| Divya     | Nair     | Electronics      |
+| Kavita    | Joshi    | Mathematics      |
+| Suresh    | Patel    | Mechanical       |
++-----------+----------+------------------+
+8 rows in set (0.00 sec)
+
+mysql>  
+mysql> -- Q21: Students who have at least one 'A+' grade (EXISTS / correlated subquery)
+mysql> SELECT s.FirstName, s.LastName
+    -> FROM Student s
+    -> WHERE EXISTS (
+    ->   SELECT 1 FROM Enrollment e WHERE e.StudentID = s.StudentID AND e.Grade = 'A+'
+    -> );
++-----------+----------+
+| FirstName | LastName |
++-----------+----------+
+| Priya     | Reddy    |
+| Vikram    | Rao      |
++-----------+----------+
+2 rows in set (0.00 sec)
+
+mysql> -- Q22: Combined list of department names and course names (UNION)
+mysql> SELECT DeptName AS Name, 'Department' AS Type FROM Department
+    -> UNION
+    -> SELECT CourseName, 'Course' FROM Course
+    -> ORDER BY Type, Name;
++----------------------+------------+
+| Name                 | Type       |
++----------------------+------------+
+| Data Structures      | Course     |
+| Database Systems     | Course     |
+| Digital Electronics  | Course     |
+| Discrete Mathematics | Course     |
+| Fluid Mechanics      | Course     |
+| Linear Algebra       | Course     |
+| Operating Systems    | Course     |
+| Signals and Systems  | Course     |
+| Structural Analysis  | Course     |
+| Thermodynamics       | Course     |
+| Civil                | Department |
+| Computer Science     | Department |
+| Electronics          | Department |
+| Mathematics          | Department |
+| Mechanical           | Department |
++----------------------+------------+
+15 rows in set (0.00 sec)
+
+mysql>  
+mysql> -- Q23: Male vs female student count
+mysql> SELECT Gender, COUNT(*) AS Total FROM Student GROUP BY Gender;
++--------+-------+
+| Gender | Total |
++--------+-------+
+| M      |     8 |
+| F      |     7 |
++--------+-------+
+2 rows in set (0.00 sec)
+
+mysql> -- Q24: Students not assigned any guardian (LEFT JOIN + NULL check)
+mysql> SELECT s.StudentID, s.FirstName, s.LastName
+    -> FROM Student s
+    -> LEFT JOIN Guardian g ON s.StudentID = g.StudentID
+    -> WHERE g.StudentID IS NULL;
+Empty set (0.00 sec)
+
+mysql> -- -> none in this sample
+mysql>  
+mysql> -- Q25: Course with the highest enrollment count
+mysql> SELECT c.CourseName, COUNT(e.StudentID) AS Enrolled
+    -> FROM Course c JOIN Enrollment e ON c.CourseID = e.CourseID
+    -> GROUP BY c.CourseID
+    -> ORDER BY Enrolled DESC
+    -> LIMIT 1;
++------------------+----------+
+| CourseName       | Enrolled |
++------------------+----------+
+| Database Systems |        4 |
++------------------+----------+
+1 row in set (0.00 sec)
+
+mysql> -- Q26: Faculty hired before the year 2016
+mysql> SELECT FirstName, LastName, HireDate
+    -> FROM Faculty
+    -> WHERE YEAR(HireDate) < 2016;
++-----------+----------+------------+
+| FirstName | LastName | HireDate   |
++-----------+----------+------------+
+| Ravi      | Kumar    | 2015-06-01 |
+| Arjun     | Mehta    | 2014-01-20 |
+| Suresh    | Patel    | 2012-07-09 |
+| Manoj     | Verma    | 2013-05-05 |
++-----------+----------+------------+
+4 rows in set (0.00 sec)
+
+mysql>  
+mysql> -- Q27: Department that offers the most courses
+mysql> SELECT d.DeptName, COUNT(c.CourseID) AS TotalCourses
+    -> FROM Department d JOIN Course c ON d.DeptID = c.DeptID
+    -> GROUP BY d.DeptName
+    -> ORDER BY TotalCourses DESC
+    -> LIMIT 1;
++------------------+--------------+
+| DeptName         | TotalCourses |
++------------------+--------------+
+| Computer Science |            3 |
++------------------+--------------+
+1 row in set (0.00 sec)
+
+mysql> -- Q28: Students with more than 2 enrollments (CTE)
+mysql> WITH EnrollCount AS (
+    ->   SELECT StudentID, COUNT(*) AS Cnt FROM Enrollment GROUP BY StudentID
+    -> )
+    -> SELECT s.FirstName, s.LastName, ec.Cnt
+    -> FROM EnrollCount ec JOIN Student s ON ec.StudentID = s.StudentID
+    -> WHERE ec.Cnt > 2;
++-----------+----------+-----+
+| FirstName | LastName | Cnt |
++-----------+----------+-----+
+| Aditya    | Sharma   |   4 |
+| Priya     | Reddy    |   3 |
++-----------+----------+-----+
+2 rows in set (0.01 sec)
+
+mysql> -- Q29: Update a student's grade (DML)
+mysql> UPDATE Enrollment SET Grade = 'A'
+    -> WHERE StudentID = 11 AND CourseID = 201 AND Semester = 'Sem1';
+Query OK, 1 row affected (0.01 sec)
+Rows matched: 1  Changed: 1  Warnings: 0
+
+mysql>  
+mysql> -- Q30: Delete a guardian record (DML)
+mysql> DELETE FROM Guardian WHERE GuardianID = 2 AND StudentID = 1;
+Query OK, 1 row affected (0.00 sec)
+
+mysql>  
+mysql> -- Q31: A reusable view for student report cards
+mysql> CREATE VIEW StudentReport AS
+    -> SELECT s.StudentID, s.FirstName, s.LastName, c.CourseName, e.Grade, e.Semester
+    -> FROM Student s JOIN Enrollment e ON s.StudentID = e.StudentID
+    -> JOIN Course c ON e.CourseID = c.CourseID;
+Query OK, 0 rows affected (0.01 sec)
+
+mysql>  
+mysql> SELECT * FROM StudentReport WHERE StudentID = 1;
++-----------+-----------+----------+---------------------+-------+----------+
+| StudentID | FirstName | LastName | CourseName          | Grade | Semester |
++-----------+-----------+----------+---------------------+-------+----------+
+|         1 | Aditya    | Sharma   | Database Systems    | A     | Sem1     |
+|         1 | Aditya    | Sharma   | Data Structures     | B+    | Sem1     |
+|         1 | Aditya    | Sharma   | Operating Systems   | A-    | Sem1     |
+|         1 | Aditya    | Sharma   | Digital Electronics | B+    | Sem2     |
++-----------+-----------+----------+---------------------+-------+----------+
+4 rows in set (0.01 sec)
+
+mysql> -- Q32: Rank students by number of courses taken (ROW_NUMBER window function)
+mysql> SELECT FirstName, LastName, CourseCount,
+    ->        ROW_NUMBER() OVER (ORDER BY CourseCount DESC) AS Rnk
+    -> FROM (
+    ->   SELECT s.StudentID, s.FirstName, s.LastName, COUNT(e.CourseID) AS CourseCount
+    ->   FROM Student s LEFT JOIN Enrollment e ON s.StudentID = e.StudentID
+    ->   GROUP BY s.StudentID
+    -> ) t;
++-----------+----------+-------------+-----+
+| FirstName | LastName | CourseCount | Rnk |
++-----------+----------+-------------+-----+
+| Aditya    | Sharma   |           4 |   1 |
+| Priya     | Reddy    |           3 |   2 |
+| Karthik   | Iyer     |           2 |   3 |
+| Meena     | Krishnan |           2 |   4 |
+| Rahul     | Verma    |           2 |   5 |
+| Vikram    | Rao      |           2 |   6 |
+| Rohit     | Das      |           2 |   7 |
+| Sneha     | Gupta    |           1 |   8 |
+| Anjali    | Nair     |           1 |   9 |
+| Suresh    | Babu     |           1 |  10 |
+| Divya     | Menon    |           1 |  11 |
+| Pooja     | Iyer     |           1 |  12 |
+| Naveen    | Kumar    |           1 |  13 |
+| Swathi    | Reddy    |           1 |  14 |
+| Kiran     | Shetty   |           1 |  15 |
++-----------+----------+-------------+-----+
+15 rows in set (0.01 sec)
+
+mysql>  
+mysql> -- Q33: Departments with no HOD assigned (NULL edge case check)
+mysql> SELECT DeptName FROM Department WHERE HODID IS NULL;
+Empty set (0.00 sec)
+
+mysql> -- -> none in this sample (every department has an HOD)
+mysql> 
+mysql> -- Q34: Students OLDER than the average student age (nested subquery)
+mysql> SELECT FirstName, LastName,
+    ->        TIMESTAMPDIFF(YEAR, DOB, CURDATE()) AS Age
+    -> FROM Student
+    -> WHERE TIMESTAMPDIFF(YEAR, DOB, CURDATE()) > (
+    ->   SELECT AVG(TIMESTAMPDIFF(YEAR, DOB, CURDATE())) FROM Student
+    -> )
+    -> ORDER BY Age DESC;
++-----------+----------+------+
+| FirstName | LastName | Age  |
++-----------+----------+------+
+| Vikram    | Rao      |   23 |
+| Suresh    | Babu     |   23 |
+| Rohit     | Das      |   23 |
+| Naveen    | Kumar    |   23 |
+| Kiran     | Shetty   |   23 |
++-----------+----------+------+
+5 rows in set (0.00 sec)
+
+mysql> -- -> Vikram Rao, Suresh Babu, Rohit Das, Naveen Kumar, Kiran Shetty (all age 23,
+mysql> --    older than the class average of ~22.3)
+mysql> -- The inner SELECT runs first and returns a single average-age number;
+mysql> -- the outer SELECT then compares every student's age against that number.
+mysql>  
+mysql> -- Q35: Every course with the faculty who teaches it and its department (simple multi-table JOIN)
+mysql> SELECT c.CourseName, f.FirstName, f.LastName, d.DeptName
+    -> FROM Course c
+    -> JOIN Teaches t ON c.CourseID = t.CourseID
+    -> JOIN Faculty f ON t.FacultyID = f.FacultyID
+    -> JOIN Department d ON c.DeptID = d.DeptID
+    -> ORDER BY d.DeptName, c.CourseName;
++----------------------+-----------+----------+------------------+
+| CourseName           | FirstName | LastName | DeptName         |
++----------------------+-----------+----------+------------------+
+| Structural Analysis  | Manoj     | Verma    | Civil            |
+| Data Structures      | Ravi      | Kumar    | Computer Science |
+| Data Structures      | Anita     | Singh    | Computer Science |
+| Database Systems     | Ravi      | Kumar    | Computer Science |
+| Database Systems     | Sneha     | Rao      | Computer Science |
+| Operating Systems    | Sneha     | Rao      | Computer Science |
+| Digital Electronics  | Arjun     | Mehta    | Electronics      |
+| Signals and Systems  | Divya     | Nair     | Electronics      |
+| Discrete Mathematics | Kavita    | Joshi    | Mathematics      |
+| Linear Algebra       | Kavita    | Joshi    | Mathematics      |
+| Fluid Mechanics      | Suresh    | Patel    | Mechanical       |
+| Thermodynamics       | Suresh    | Patel    | Mechanical       |
++----------------------+-----------+----------+------------------+
+12 rows in set (0.00 sec)
+
+mysql> -- -> e.g. Database Systems - Ravi Kumar (Computer Science),
+mysql> --         Digital Electronics - Arjun Mehta (Electronics), etc.
+mysql>  
+mysql> -- Q36: Courses that carry more than 3 credits (simple filter)
+mysql> SELECT CourseName, Credits FROM Course WHERE Credits > 3 ORDER BY Credits DESC;
++---------------------+---------+
+| CourseName          | Credits |
++---------------------+---------+
+| Database Systems    |       4 |
+| Data Structures     |       4 |
+| Digital Electronics |       4 |
+| Thermodynamics      |       4 |
+| Structural Analysis |       4 |
++---------------------+---------+
+5 rows in set (0.00 sec)
+
+mysql> -- -> Database Systems, Data Structures, Digital Electronics, Thermodynamics,
+mysql> --    Structural Analysis (all 4-credit courses)
+mysql>  
+mysql> -- Q37: Students enrolled in BOTH 'Database Systems' AND 'Data Structures' (multi-join)
+mysql> SELECT s.FirstName, s.LastName
+    -> FROM Student s
+    -> JOIN Enrollment e1 ON s.StudentID = e1.StudentID
+    -> JOIN Course c1 ON e1.CourseID = c1.CourseID AND c1.CourseName = 'Database Systems'
+    -> JOIN Enrollment e2 ON s.StudentID = e2.StudentID
+    -> JOIN Course c2 ON e2.CourseID = c2.CourseID AND c2.CourseName = 'Data Structures';
++-----------+----------+
+| FirstName | LastName |
++-----------+----------+
+| Aditya    | Sharma   |
+| Priya     | Reddy    |
+| Rohit     | Das      |
++-----------+----------+
+3 rows in set (0.01 sec)
+
+mysql> -- -> Aditya Sharma, Priya Reddy, Rohit Das
+mysql>  
+mysql> -- Q38: Total credit load offered by each department
+mysql> SELECT d.DeptName, SUM(c.Credits) AS TotalCredits
+    -> FROM Department d JOIN Course c ON d.DeptID = c.DeptID
+    -> GROUP BY d.DeptName
+    -> ORDER BY TotalCredits DESC;
++------------------+--------------+
+| DeptName         | TotalCredits |
++------------------+--------------+
+| Computer Science |           11 |
+| Electronics      |            7 |
+| Mechanical       |            7 |
+| Mathematics      |            6 |
+| Civil            |            4 |
++------------------+--------------+
+5 rows in set (0.00 sec)
+
+mysql> -- -> Computer Science leads with 11 credits total
+mysql>  
+mysql> -- Q39: Guardian occupation distribution
+mysql> SELECT Occupation, COUNT(*) AS GuardianCount
+    -> FROM Guardian
+    -> GROUP BY Occupation
+    -> ORDER BY GuardianCount DESC;
++------------+---------------+
+| Occupation | GuardianCount |
++------------+---------------+
+| Business   |             4 |
+| Engineer   |             3 |
+| Teacher    |             2 |
+| Doctor     |             2 |
+| Farmer     |             2 |
+| Nurse      |             1 |
+| Clerk      |             1 |
++------------+---------------+
+7 rows in set (0.00 sec)
+
+mysql> -- -> Business(4) is the most common guardian occupation
+mysql>  
+mysql> -- Q40: Safely enroll a student in a course using a TRANSACTION
+mysql> -- A transaction groups multiple statements so they either ALL succeed
+mysql> -- together (COMMIT) or ALL get undone together (ROLLBACK) if something
+mysql> -- goes wrong midway — the database is never left half-updated.
+mysql> START TRANSACTION;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql>  
+mysql>   INSERT INTO Enrollment (StudentID, CourseID, Semester, Grade, EnrollmentDate)
+    ->   VALUES (6, 201, 'Sem2', NULL, CURDATE());
+Query OK, 1 row affected (0.00 sec)
+
+mysql>   -- Sneha Gupta (StudentID 6) is now enrolled in Database Systems for Sem2
+mysql>  
+mysql>   -- If this were part of a bigger booking flow (e.g. also decreasing a
+mysql>   -- seat-count column), it would go here in the SAME transaction, so
+mysql>   -- either both changes happen or neither does.
+mysql>  
+mysql> COMMIT;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> -- The change is now permanent. If anything had looked wrong before this
+mysql> -- line, running ROLLBACK; instead of COMMIT; would undo the INSERT above
+mysql> -- completely, as if it never happened.
+mysql> 
+mysql> 
+mysql> SHOW TABLES;
++------------------------+
+| Tables_in_student_dbms |
++------------------------+
+| course                 |
+| department             |
+| enrollment             |
+| faculty                |
+| guardian               |
+| student                |
+| studentphone           |
+| studentreport          |
+| teaches                |
++------------------------+
+9 rows in set (0.05 sec)
+
+mysql> SELECT TABLE_NAME
+    -> FROM INFORMATION_SCHEMA.VIEWS
+    -> WHERE TABLE_SCHEMA='STUDENT_DBMS';
++---------------+
+| TABLE_NAME    |
++---------------+
+| studentreport |
++---------------+
+1 row in set (0.02 sec)
+
+mysql> SELECT * FROM ENROLLMENT;
++-----------+----------+----------+-------+----------------+
+| StudentID | CourseID | Semester | Grade | EnrollmentDate |
++-----------+----------+----------+-------+----------------+
+|         1 |      201 | Sem1     | A     | 2023-01-10     |
+|         1 |      202 | Sem1     | B+    | 2023-01-10     |
+|         1 |      203 | Sem1     | A-    | 2023-01-10     |
+|         1 |      204 | Sem2     | B+    | 2023-07-10     |
+|         2 |      201 | Sem1     | A+    | 2023-01-10     |
+|         2 |      202 | Sem1     | A     | 2023-01-10     |
+|         2 |      203 | Sem2     | A     | 2023-07-10     |
+|         3 |      204 | Sem1     | B     | 2022-01-10     |
+|         3 |      205 | Sem1     | A-    | 2022-01-10     |
+|         4 |      204 | Sem1     | A     | 2023-01-10     |
+|         4 |      205 | Sem1     | B+    | 2023-01-10     |
+|         5 |      206 | Sem1     | B     | 2022-01-10     |
+|         5 |      207 | Sem2     | A-    | 2022-07-10     |
+|         6 |      201 | Sem2     | NULL  | 2026-08-09     |
+|         6 |      206 | Sem1     | A     | 2023-01-10     |
+|         7 |      208 | Sem1     | A+    | 2021-01-10     |
+|         7 |      209 | Sem2     | A     | 2021-07-10     |
+|         8 |      208 | Sem1     | B+    | 2023-01-10     |
+|         9 |      210 | Sem1     | B     | 2022-01-10     |
+|        10 |      210 | Sem1     | A-    | 2023-01-10     |
+|        11 |      201 | Sem1     | A     | 2022-01-10     |
+|        11 |      202 | Sem1     | B     | 2022-01-10     |
+|        12 |      201 | Sem1     | A     | 2023-01-10     |
+|        13 |      204 | Sem1     | B+    | 2022-01-10     |
+|        14 |      206 | Sem1     | A-    | 2023-01-10     |
+|        15 |      208 | Sem1     | A     | 2022-01-10     |
++-----------+----------+----------+-------+----------------+
+26 rows in set (0.00 sec)
+
